@@ -348,3 +348,9 @@ if (r && i) {
 }
 @media(max-width:380px){header>div:first-child>a:first-child span:last-child{font-size:14px!important}header .pp-cta{padding:6px 9px!important;font-size:11px!important}}
 </style>
+<style id="memoriser-product-cover-fill-fix">
+/* Fill each product's image frame edge-to-edge; retain the cover's 3:4 shape. */
+.pp-book>div:first-child{width:100%!important;aspect-ratio:3/4!important;overflow:hidden!important;background:#f5f4ef!important;position:relative!important}
+.pp-book>div:first-child img{display:block!important;width:100%!important;height:100%!important;max-height:none!important;aspect-ratio:auto!important;object-fit:cover!important;object-position:center center!important;background:transparent!important}
+@media(max-width:700px){.pp-book>div:first-child{aspect-ratio:3/4!important}.pp-book>div:first-child img{width:100%!important;height:100%!important;object-fit:cover!important}}
+</style>
