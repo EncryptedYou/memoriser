@@ -213,30 +213,44 @@ if (e) {
   document.querySelectorAll('a[href="#buy"]').forEach(a => { if (priceRaw && /Buy now/i.test(a.textContent)) a.textContent = 'Continue · ' + now; });
   const bottom = document.querySelector('body > div[style*="position: fixed"][style*="bottom: 0"]');
   if (bottom) { const labels = bottom.querySelectorAll('div'); if (labels[0]) labels[0].textContent = title; const spans = bottom.querySelectorAll('span'); if (spans[0] && priceRaw) spans[0].textContent = now; if (spans[1] && compareRaw) spans[1].textContent = was; }
-  // Build the related-subject cards from the selected product, so every checkout
-  // shows the other subjects and the links open this same dynamic checkout page.
+  // Build all PCMB subjects for the selected class. The selected subject is highlighted.
+  // Subject switches replace the current history entry, so Back returns to the page before checkout.
   const trackGrid = document.getElementById('pp-track-products');
   if (trackGrid) {
     const subjects = [
-      {key:'physics', label:'Physics', price:'199', compare:'349', pages:'56 pages', cover:'/assets/covers/Physics_class11.png', details:'Physics handwritten notes and formula sheets for Class 11 and 12, NEET and JEE.'},
-      {key:'chemistry', label:'Chemistry', price:'199', compare:'349', pages:'37 pages', cover:'/assets/covers/Chemistry_class11.png', details:'Chemistry handwritten notes and revision resources for Class 11 and 12, NEET and JEE.'},
-      {key:'mathematics', label:'Mathematics', price:'199', compare:'349', pages:'41 pages', cover:'/assets/covers/Mathematics_class11.png', details:'Mathematics handwritten notes and formula sheets for Class 11 and 12, JEE.'},
-      {key:'biology', label:'Biology', price:'199', compare:'349', pages:'48 pages', cover:'/assets/covers/Biology_class11.png', details:'Biology handwritten notes and revision resources for Class 11 and 12, NEET.'}
+      {key:'physics', label:'Physics', price:'199', compare:'349', pages:'56 pages', covers:{11:'/assets/covers/Physics_class11.png',12:'/assets/covers/Physics_class12.png'}, details:{11:'Physics handwritten notes and formula sheets for Class 11, NEET and JEE.',12:'Physics handwritten notes and formula sheets for Class 12, NEET and JEE.'}},
+      {key:'chemistry', label:'Chemistry', price:'199', compare:'349', pages:'37 pages', covers:{11:'/assets/covers/Chemistry_class11.png',12:'/assets/covers/chemistry_class12.png'}, details:{11:'Chemistry handwritten notes and revision resources for Class 11, NEET and JEE.',12:'Chemistry handwritten notes and revision resources for Class 12, NEET and JEE.'}},
+      {key:'mathematics', label:'Mathematics', price:'199', compare:'349', pages:'41 pages', covers:{11:'/assets/covers/Mathematics_class11.png',12:'/assets/covers/mathematics_class12.png'}, details:{11:'Mathematics handwritten notes and formula sheets for Class 11, JEE.',12:'Mathematics handwritten notes and formula sheets for Class 12, JEE.'}},
+      {key:'biology', label:'Biology', price:'199', compare:'349', pages:'48 pages', covers:{11:'/assets/covers/Biology_class11.png',12:'/assets/covers/biology_class12.png'}, details:{11:'Biology handwritten notes and revision resources for Class 11, NEET.',12:'Biology handwritten notes and revision resources for Class 12, NEET.'}}
     ];
     const identifyText = (product + ' ' + title + ' ' + (cover || '')).toLowerCase();
     const current = identifyText.includes('chem') ? 'chemistry' :
-      (identifyText.includes('math') || identifyText.includes('mathemat') ? 'mathematics' :
-      (identifyText.includes('biology') || identifyText.includes('bio') ? 'biology' :
-      (identifyText.includes('physics') || identifyText.includes('phy') ? 'physics' : '')));
+      (identifyText.includes('math') ? 'mathematics' :
+      (identifyText.includes('biology') || /\bbio\b/.test(identifyText) ? 'biology' :
+      (identifyText.includes('physics') || /\bphy\b/.test(identifyText) ? 'physics' : 'physics')));
+    const classNumber = /class[\s_-]*12|class12|_12\b|\b12th\b/i.test(identifyText) ? 12 : 11;
+    trackGrid.style.gridTemplateColumns = 'repeat(2, minmax(0, 1fr))';
+    trackGrid.setAttribute('aria-label', 'Choose a Class ' + classNumber + ' subject');
     trackGrid.replaceChildren();
-    subjects.filter(item => item.key !== current).forEach(item => {
+    subjects.forEach(item => {
+      const selected = item.key === current;
       const link = document.createElement('a');
-      const params = new URLSearchParams({product:item.key + '-class11', title:item.label + ' Class 11', cover:item.cover, price:item.price, compare:item.compare, details:item.details});
+      const slug = item.key + '-class' + classNumber;
+      const params = new URLSearchParams({product:slug, title:item.label + ' Class ' + classNumber, cover:item.covers[classNumber], price:item.price, compare:item.compare, details:item.details[classNumber]});
       link.href = '/checkout.html?' + params.toString();
-      link.style.cssText = 'text-align:left;border:1px solid #e3e9f1;background:#fff;color:#212121;border-radius:11px;padding:13px 12px;display:grid;gap:3px;min-height:58px;align-content:center;text-decoration:none';
+      link.dataset.subject = item.key;
+      link.setAttribute('aria-current', selected ? 'page' : 'false');
+      link.style.cssText = 'text-align:left;border:1px solid ' + (selected ? '#212121' : '#e3e9f1') + ';background:' + (selected ? '#212121' : '#fff') + ';color:' + (selected ? '#fff' : '#212121') + ';border-radius:11px;padding:13px 12px;display:grid;gap:4px;min-height:66px;align-content:center;text-decoration:none;transition:background .15s ease,color .15s ease,border-color .15s ease';
       const name = document.createElement('span'); name.textContent = item.label; name.style.cssText = 'font-size:14px;font-weight:700';
-      const meta = document.createElement('span'); meta.textContent = '₹' + item.price + ' · ' + item.pages; meta.style.cssText = 'font-size:12px;color:#5f6368';
-      link.append(name, meta);
+      const meta = document.createElement('span'); meta.textContent = '₹' + item.price + ' · ' + item.pages; meta.style.cssText = 'font-size:12px;color:' + (selected ? '#f1f1f1' : '#5f6368');
+      if (selected) { const currentTag = document.createElement('span'); currentTag.textContent = 'CURRENT SUBJECT'; currentTag.style.cssText = 'font-size:9px;font-weight:800;letter-spacing:.08em;color:#fff;opacity:.8'; link.append(name, meta, currentTag); }
+      else link.append(name, meta);
+      // Do not add a new history entry for every subject change; browser Back returns home.
+      link.addEventListener('click', function(event) {
+        if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+        event.preventDefault();
+        window.location.replace(link.href);
+      });
       trackGrid.appendChild(link);
     });
   }
